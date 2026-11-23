@@ -354,7 +354,6 @@ h2 {
 }
 .s-line { margin: 0; font-size: 17px; }
 .s-line.muted { color: var(--muted); }
-.s-line.caveat { font-size: 15px; }
 
 .more { margin-top: 28px; }
 .more > summary {

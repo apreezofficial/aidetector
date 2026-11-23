@@ -67,8 +67,6 @@ const FIELD_LABELS: Record<string, string> = {
   c2paSigner: "Signed by",
   c2paSignedAt: "Signed at",
   c2paAction: "Action",
-  c2paDescription: "What the credentials say",
-  c2paWatermark: "Invisible watermark",
   c2paModel: "Model",
   c2paCreatedAt: "Created (credentials)",
   c2paAiLevel: "AI involvement",
@@ -115,14 +113,9 @@ function emptyItem<K extends "li" | "div">(tag: K, text: string): HTMLElementTag
 
 // ---- rendering ----
 function renderSummary(summary: Summary | null, verdict: string): void {
-  const s: Summary = summary ?? { status: verdict, tone: "", caveat: null, tool: null, provider: null, model: null, createdAt: null };
+  const s: Summary = summary ?? { status: verdict, tone: "", tool: null, provider: null, model: null, createdAt: null };
   $("dot").className = `dot ${s.tone}`;
   $("s-status").textContent = s.status;
-
-  // Why "nothing found" can't rule AI out (screenshots, documents).
-  const caveat = $("s-caveat");
-  caveat.textContent = s.caveat ?? "";
-  caveat.hidden = !s.caveat;
 
   const by = $("s-by");
   const date = $("s-date");
@@ -132,8 +125,7 @@ function renderSummary(summary: Summary | null, verdict: string): void {
 
   // Line 2: which AI, then which model.
   const name = make("span", "acc", s.tool || s.provider || "an AI tool (name not stated)");
-  // "Google Generative AI (Google)" repeats itself, so skip the company when the tool name includes it.
-  const company = s.tool && s.provider && !s.tool.includes(s.provider) ? ` (${s.provider})` : "";
+  const company = s.tool && s.provider ? ` (${s.provider})` : "";
   by.replaceChildren("By ", name, `${company} · Model ${s.model || "not stated"}`);
 
   // Line 3: when it was made.
