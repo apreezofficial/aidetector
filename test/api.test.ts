@@ -92,3 +92,22 @@ test("the app is the default export, as hosts like Vercel expect", async () => {
   assert.equal(typeof mod.default, "function"); // an Express app is callable
   assert.equal(typeof mod.createApp, "function");
 });
+
+test("GET / returns the home page itself, as served from the function", async () => {
+  const [res, file] = await Promise.all([
+    fetch(`${base}/`),
+    import("node:fs/promises").then((fs) => fs.readFile(new URL("../public/index.html", import.meta.url), "utf8")),
+  ]);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") ?? "", /text\/html/);
+  assert.equal(await res.text(), file);
+});
+
+// On Vercel the function can receive "/", and it only ships files its build's
+// file tracer can see. This is the form the tracer follows; if someone changes
+// it, the live home page would 404 again.
+test("server.ts reads index.html in a form Vercel's file tracer can follow", async () => {
+  const fs = await import("node:fs/promises");
+  const source = await fs.readFile(new URL("../src/server.ts", import.meta.url), "utf8");
+  assert.match(source, /new URL\("\.\.\/public\/index\.html", import\.meta\.url\)/);
+});

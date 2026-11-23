@@ -16,6 +16,12 @@ const ALLOWED_EXT = new Set([
 
 type HttpError = Error & { status?: number; code?: string };
 
+// The home page, read once at startup. On Vercel the function (not the CDN) can
+// receive requests for "/", and its bundle only contains files that the build's
+// file tracer can see. `new URL("...", import.meta.url)` is the form it follows,
+// so this also ships public/index.html inside the function.
+const indexHtml: Buffer | null = await fs.readFile(new URL("../public/index.html", import.meta.url)).catch(() => null);
+
 // Uploads are written to a private temp folder, inspected, then deleted.
 const uploadDir = await fs.mkdtemp(path.join(os.tmpdir(), "aidetect-upload-"));
 
@@ -42,6 +48,14 @@ const upload = multer({
 export function createApp(): Express {
   const app = express();
   app.disable("x-powered-by");
+
+  app.get("/", (_req, res, next) => {
+    if (!indexHtml) {
+      next(); // falls through to express.static below
+      return;
+    }
+    res.type("html").send(indexHtml);
+  });
 
   // public/ sits next to src/ (and next to dist/), so ".." works for both.
   app.use(express.static(path.join(import.meta.dirname, "..", "public")));
