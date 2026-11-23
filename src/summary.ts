@@ -5,6 +5,22 @@ import type { Provenance, Report, Summary, Tone } from "./types.js";
 const C2PA_UNCHECKED = /C2PA read failed|C2PA parse failed|\(C2PA\) could not be checked/;
 
 /**
+ * Why "nothing found" doesn't mean "not AI". Most of the time a missing signature is
+ * because the tool never wrote one (documents) or the marker was lost (screenshots,
+ * re-saves, messaging apps), not because the file is human-made.
+ */
+function caveatFor(report: Report): string | null {
+  if (report.verdict !== "no-ai-signature-found") return null;
+  if (report.kind === "image") {
+    return "Screenshots, re-saved copies, and apps that strip metadata remove AI markers, so this can't rule AI out.";
+  }
+  if (report.kind === "pdf" || report.kind === "office") {
+    return "Most AI tools don't mark documents at all, so this can't rule AI out.";
+  }
+  return null;
+}
+
+/**
  * The short answer shown at the top: status, which AI (and company), which
  * model, and when it was made. Any part we can't find is null.
  */
@@ -60,6 +76,7 @@ export function buildSummary(report: Report, provenance: Provenance | null | und
   return {
     status,
     tone,
+    caveat: caveatFor(report),
     tool: found ? tool : null,
     provider: found ? provider : null,
     model: found ? p?.model ?? null : null,

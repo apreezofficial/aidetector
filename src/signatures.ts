@@ -26,6 +26,9 @@ export const AI_TOOLS: readonly AiToolEntry[] = [
   { pattern: /\bsora\b/i, tool: "Sora", provider: "OpenAI" },
   { pattern: /\bopenai\b/i, tool: null, provider: "OpenAI" },
   { pattern: /\bgemini\b/i, tool: "Gemini", provider: "Google" },
+  // Google's credentials say "Created by Google Generative AI." without naming Gemini or a model.
+  { pattern: /\bgoogle generative ai\b/i, tool: "Google Generative AI", provider: "Google" },
+  { pattern: /\bsynthid\b/i, tool: null, provider: "Google" },
   { pattern: /\bimagen[-\s]?\d/i, tool: "Imagen", provider: "Google" },
   { pattern: /\bmade with google ai\b/i, tool: "Google AI", provider: "Google" },
   { pattern: /\bmidjourney\b/i, tool: "Midjourney", provider: "Midjourney" },

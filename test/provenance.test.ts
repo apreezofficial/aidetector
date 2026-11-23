@@ -211,3 +211,107 @@ test("a file with no credentials at all still gets the plain all-clear", () => {
   assert.equal(s.status, "No AI signature found");
   assert.equal(s.tone, "clear");
 });
+
+// ---- Google's credentials: no tool or model name, only a description ----
+test("Google-style manifest: tool comes from the description, SynthID is noted, original beats the later edit", () => {
+  const { provenance, fields } = summarizeStore(
+    store(
+      {
+        opened: {
+          claim_generator_info: [{ name: "Google C2PA Core Generator Library" }],
+          signature_info: { issuer: "Google LLC", common_name: "Google Media Processing Services", time: "2026-10-29T01:25:53+00:00" },
+          assertions: [
+            {
+              label: "c2pa.actions.v2",
+              data: {
+                actions: [
+                  { action: "c2pa.opened", description: "Opened by Google" },
+                  { action: "c2pa.transcoded", digitalSourceType: "http://cv.iptc.org/newscodes/digitalsourcetype/algorithmicallyEnhanced" },
+                ],
+              },
+            },
+          ],
+        },
+        created: {
+          claim_generator_info: [{ name: "Google C2PA Core Generator Library" }],
+          signature_info: { issuer: "Google LLC", common_name: "Google Media Processing Services", time: "2026-10-29T01:23:54+00:00" },
+          assertions: [
+            {
+              label: "c2pa.actions.v2",
+              data: {
+                actions: [
+                  { action: "c2pa.created", description: "Created by Google Generative AI.", digitalSourceType: TRAINED },
+                  { action: "c2pa.edited", description: "Applied imperceptible SynthID watermark.", digitalSourceType: TRAINED },
+                ],
+              },
+            },
+          ],
+        },
+      },
+      "opened"
+    )
+  );
+  assert.ok(provenance);
+  assert.equal(provenance.tool, "Google Generative AI");
+  assert.equal(provenance.provider, "Google");
+  assert.equal(provenance.model, null); // Google doesn't write a model name
+  assert.equal(provenance.aiLevel, "generated");
+  assert.equal(provenance.createdAt, "2026-10-29T01:23:54+00:00"); // the original's time, not the later copy's
+  assert.equal(fields.c2paDescription, "Created by Google Generative AI.");
+  assert.match(String(fields.c2paWatermark), /SynthID/);
+});
+
+test("no watermark field when the credentials don't mention one", () => {
+  const { fields } = summarizeStore(
+    store({
+      a: {
+        signature_info: { issuer: "OpenAI OpCo, LLC" },
+        assertions: [{ label: "c2pa.actions.v2", data: { actions: [{ action: "c2pa.created", digitalSourceType: TRAINED, softwareAgent: { name: "ChatGPT", version: "gpt-image" } }] } }],
+      },
+    })
+  );
+  assert.equal(fields.c2paWatermark, undefined);
+});
+
+// ---- caveats: why "nothing found" can't rule AI out ----
+test("caveat appears for images and documents with no signature, not for found or text files", () => {
+  const withKind = (kind: Report["kind"], verdict: Report["verdict"]): Report => ({ ...reportWith([]), kind, verdict });
+  assert.match(buildSummary(withKind("image", "no-ai-signature-found"), null).caveat ?? "", /Screenshots, re-saved copies/);
+  assert.match(buildSummary(withKind("pdf", "no-ai-signature-found"), null).caveat ?? "", /don't mark documents/);
+  assert.match(buildSummary(withKind("office", "no-ai-signature-found"), null).caveat ?? "", /don't mark documents/);
+  assert.equal(buildSummary(withKind("image", "ai-signature-found"), null).caveat, null);
+  assert.equal(buildSummary(withKind("text", "no-metadata-to-check"), null).caveat, null);
+});
+
+// ---- a Gemini-style PNG: the AI marker lives in an XMP iTXt chunk ----
+function pngWithItxt(keyword: string, text: string): Buffer {
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    return Buffer.concat([len, Buffer.from(type, "ascii"), data, Buffer.alloc(4)]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(1, 0);
+  ihdr.writeUInt32BE(1, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  // keyword\0, compression flag 0, method 0, language\0, translated keyword\0, text
+  const itxt = Buffer.concat([Buffer.from(keyword + "\0", "utf8"), Buffer.from([0, 0]), Buffer.from("\0\0", "utf8"), Buffer.from(text, "utf8")]);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("iTXt", itxt),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+test("png whose XMP chunk says Made with Google AI is flagged and the tool is named", async () => {
+  const xmp = `<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/" photoshop:Credit="Made with Google AI"/></rdf:RDF></x:xmpmeta>`;
+  const file = path.join(dir, "gemini-style.png");
+  await fs.writeFile(file, pngWithItxt("XML:com.adobe.xmp", xmp));
+  const r = await inspectFile(file);
+  assert.equal(r.verdict, "ai-signature-found");
+  assert.ok(r.summary);
+  assert.equal(r.summary.tool, "Google AI");
+  assert.equal(r.summary.provider, "Google");
+});

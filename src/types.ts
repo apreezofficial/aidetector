@@ -36,6 +36,8 @@ export interface Provenance {
 export interface Summary {
   status: string;
   tone: Tone;
+  /** Why a "nothing found" result can't rule AI out (screenshots, documents), or null. */
+  caveat: string | null;
   tool: string | null;
   provider: string | null;
   model: string | null;

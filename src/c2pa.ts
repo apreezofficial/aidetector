@@ -30,6 +30,7 @@ export const C2PA_MIME_TYPES: ReadonlySet<string> = new Set([
 // The parts of a C2PA manifest store that we read.
 export interface C2paAction {
   action?: string;
+  description?: string;
   digitalSourceType?: string;
   softwareAgent?: string | { name?: string; version?: string };
   when?: string;
@@ -111,7 +112,9 @@ export function summarizeStore(store: C2paStore | null | undefined): {
   let model: string | null = agentVersion || agentName || null;
   let tool: string | null = null;
   let provider: string | null = null;
-  for (const c of [agentName, generatorName]) {
+  // Some tools (Google's) only name themselves in the action's description.
+  const description = originAction?.description ?? null;
+  for (const c of [agentName, generatorName, description]) {
     const id = c && c !== model ? identifyTool(c) : null;
     if (id?.tool) {
       tool = id.tool;
@@ -147,6 +150,11 @@ export function summarizeStore(store: C2paStore | null | undefined): {
   fields.c2paSigner = active.signature_info?.common_name ?? null;
   fields.c2paSignedAt = active.signature_info?.time ?? null;
   if (originAction?.action) fields.c2paAction = originAction.action;
+  if (description) fields.c2paDescription = description;
+  // Google records that it applied an invisible SynthID watermark. We can't read that
+  // watermark from the pixels, but the credentials say whether one was added.
+  const watermarkNote = manifests.flatMap(actionsOf).find((a) => /synthid/i.test(a.description ?? ""));
+  if (watermarkNote) fields.c2paWatermark = "SynthID (invisible, applied per the credentials)";
   if (model) fields.c2paModel = model;
   if (createdAt) fields.c2paCreatedAt = createdAt;
   if (best) fields.c2paAiLevel = best.level;
