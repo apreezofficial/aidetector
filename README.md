@@ -9,6 +9,15 @@ What it reads:
 - **PDF:** title, author, creator, producer, and C2PA credentials.
 - **Plain text (.txt, .md, .csv):** no metadata exists, so it reports that it can't check.
 
+**What it can detect.** Only tools that write a marker into their files:
+
+- **ChatGPT:** records the tool, model, and date, on images and PDFs. Full result.
+- **Gemini:** not confirmed. Two Google-credentialed JPGs I tested carried a "Created by Google Generative AI" record (shown as "Made with AI, by Google", with no tool or model name), but I have not tested freshly downloaded Gemini images, and images from Gemini that were pasted into apps, screenshotted, or re-saved had no metadata left. Google also adds an invisible SynthID watermark that only Google can read.
+- **Others that mark files** (Adobe Firefly, Microsoft, Midjourney, Stable Diffusion tools) are covered by the same checks, but have not been tried on real files yet.
+- **Tools that write nothing**, such as Claude, can't be detected, and neither can plain text from any tool.
+
+Screenshots, re-saved copies, and files sent through apps that strip metadata lose their markers too.
+
 It is not proof either way. Metadata is easy to remove or edit, so a missing signature doesn't mean human-made, and a found signature only shows that a tool was involved.
 
 ## Setup
