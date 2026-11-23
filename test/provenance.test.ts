@@ -211,3 +211,63 @@ test("a file with no credentials at all still gets the plain all-clear", () => {
   assert.equal(s.status, "No AI signature found");
   assert.equal(s.tone, "clear");
 });
+
+// ---- WebP: exifr can't read it, so EXIF and XMP chunks are read directly ----
+import { webpMetadata, xmpValue } from "../src/image.js";
+
+const webpBase = () => sharp({ create: { width: 8, height: 8, channels: 3, background: "#ffffff" } });
+
+test("webp with an AI tool in its EXIF Software field is flagged", async () => {
+  const file = path.join(dir, "exif.webp");
+  await fs.writeFile(file, await webpBase().webp().withExif({ IFD0: { Software: "Midjourney v7" } }).toBuffer());
+  const r = await inspectFile(file);
+  assert.equal(r.verdict, "ai-signature-found");
+  assert.equal(r.fields.Software, "Midjourney v7");
+  assert.ok(r.summary);
+  assert.equal(r.summary.tool, "Midjourney");
+  assert.ok(!r.notes.some((n) => /read failed/.test(n)), `unexpected notes: ${r.notes.join(" / ")}`);
+});
+
+test("webp with AI markers in its XMP chunk is flagged, with fields read", async () => {
+  const xmp = `<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmp:CreatorTool="Midjourney" Iptc4xmpExt:DigitalSourceType="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"/></rdf:RDF></x:xmpmeta>`;
+  const file = path.join(dir, "xmp.webp");
+  await fs.writeFile(file, await webpBase().webp().withXmp(xmp).toBuffer());
+  const r = await inspectFile(file);
+  assert.equal(r.verdict, "ai-signature-found");
+  assert.equal(r.fields.CreatorTool, "Midjourney");
+  assert.match(String(r.fields.DigitalSourceType), /trainedAlgorithmicMedia/);
+  assert.equal(r.summary?.tool, "Midjourney");
+});
+
+test("a webp with no metadata is a clean result with no false 'read failed' note", async () => {
+  const file = path.join(dir, "plain.webp");
+  await fs.writeFile(file, await webpBase().webp().toBuffer());
+  const r = await inspectFile(file);
+  assert.equal(r.verdict, "no-ai-signature-found");
+  assert.equal(r.fields.c2paPresent, false);
+  assert.deepEqual(r.notes, []);
+  assert.equal(r.summary?.status, "No AI signature found");
+});
+
+test("webpMetadata finds EXIF and XMP chunks, including after odd-length padding", () => {
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32LE(data.length);
+    return Buffer.concat([Buffer.from(type, "ascii"), len, data, data.length % 2 ? Buffer.alloc(1) : Buffer.alloc(0)]);
+  };
+  const body = Buffer.concat([Buffer.from("WEBP", "ascii"), chunk("EXIF", Buffer.from("Exif\0\0abc", "latin1")), chunk("XMP ", Buffer.from("<x/>", "utf8"))]);
+  const size = Buffer.alloc(4);
+  size.writeUInt32LE(body.length);
+  const riff = Buffer.concat([Buffer.from("RIFF", "ascii"), size, body]);
+  const found = webpMetadata(riff);
+  assert.equal(found.exif?.toString("latin1"), "abc"); // the "Exif\0\0" prefix is stripped
+  assert.equal(found.xmp, "<x/>");
+  assert.deepEqual(webpMetadata(Buffer.from("not a webp at all")), { exif: null, xmp: null });
+});
+
+test("xmpValue reads attribute and element forms, and nothing when absent", () => {
+  assert.equal(xmpValue('<d xmp:CreatorTool="Midjourney"/>', "CreatorTool"), "Midjourney");
+  assert.equal(xmpValue("<xmp:CreatorTool> Adobe Firefly </xmp:CreatorTool>", "CreatorTool"), "Adobe Firefly");
+  assert.equal(xmpValue("<d/>", "CreatorTool"), undefined);
+  assert.equal(xmpValue('<d xmp:CreatorTool=""/>', "CreatorTool"), undefined);
+});

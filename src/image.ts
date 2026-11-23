@@ -43,29 +43,74 @@ export function pngTextChunks(buf: Buffer): PngTextChunk[] {
   return out;
 }
 
+export interface WebpMetadata {
+  /** Raw TIFF-formatted EXIF data, if the file has an EXIF chunk. */
+  exif: Buffer | null;
+  /** The XMP packet as text, if the file has an "XMP " chunk. */
+  xmp: string | null;
+}
+
+/** Pulls the EXIF and XMP chunks out of a WebP (a RIFF container). */
+export function webpMetadata(buf: Buffer): WebpMetadata {
+  const out: WebpMetadata = { exif: null, xmp: null };
+  if (buf.length < 12 || buf.toString("ascii", 0, 4) !== "RIFF" || buf.toString("ascii", 8, 12) !== "WEBP") return out;
+  let off = 12;
+  while (off + 8 <= buf.length) {
+    const type = buf.toString("ascii", off, off + 4);
+    const len = buf.readUInt32LE(off + 4);
+    const data = buf.subarray(off + 8, off + 8 + len);
+    if (type === "EXIF") {
+      // Some writers prefix the TIFF data with "Exif\0\0", some don't.
+      out.exif = data.subarray(0, 6).toString("latin1") === "Exif\0\0" ? data.subarray(6) : data;
+    } else if (type === "XMP ") {
+      out.xmp = data.toString("utf8");
+    }
+    off += 8 + len + (len % 2); // chunks are padded to an even length
+  }
+  return out;
+}
+
+/** Reads one value from an XMP packet, whether written as an attribute or an element. */
+export function xmpValue(xml: string, name: string): string | undefined {
+  const m = new RegExp(`${name}(?:="([^"]*)"|>([^<]*)<)`).exec(xml);
+  const value = (m?.[1] ?? m?.[2])?.trim();
+  return value || undefined;
+}
+
 export async function inspectImage(filePath: string, mimeType: string): Promise<Inspection> {
   const signals: Signal[] = [];
   const fields: Fields = {};
   const notes: string[] = [];
 
-  // EXIF / XMP / IPTC via exifr (covers JPEG, PNG-XMP, WebP, AVIF, TIFF, HEIC).
+  const applyMeta = (meta: Record<string, unknown> | undefined): void => {
+    if (!meta) return;
+    for (const key of ["Software", "CreatorTool", "Make", "Model", "DigitalSourceType"]) {
+      if (meta[key] !== undefined) fields[key] = String(meta[key]);
+    }
+    const created = meta.DateTimeOriginal ?? meta.CreateDate ?? meta.CreationDate;
+    if (created instanceof Date && !Number.isNaN(created.getTime())) {
+      fields.createdAt = created.toISOString();
+    }
+    signals.push(...scanValue("exif/xmp/iptc", meta));
+  };
+
+  // EXIF / XMP / IPTC. exifr covers JPEG, PNG, AVIF, TIFF and HEIC, but not WebP,
+  // so WebP's own EXIF and XMP chunks are pulled out and read separately.
   try {
     const bytes = await fs.readFile(filePath);
-    const meta: Record<string, unknown> | undefined = await exifr.parse(bytes, {
-      tiff: true,
-      exif: true,
-      xmp: true,
-      iptc: true,
-    });
-    if (meta) {
-      for (const key of ["Software", "CreatorTool", "Make", "Model", "DigitalSourceType"]) {
-        if (meta[key] !== undefined) fields[key] = String(meta[key]);
+    if (mimeType === "image/webp") {
+      const { exif, xmp } = webpMetadata(bytes);
+      if (exif) applyMeta(await exifr.parse(exif, { tiff: true, exif: true }));
+      if (xmp) {
+        const tool = xmpValue(xmp, "CreatorTool");
+        const source = xmpValue(xmp, "DigitalSourceType");
+        if (tool) fields.CreatorTool = tool;
+        if (source) fields.DigitalSourceType = source;
+        // The raw text is scanned too, so other AI markers in the packet are caught.
+        signals.push(...scanValue("webp-xmp", { CreatorTool: tool, DigitalSourceType: source, xmp }));
       }
-      const created = meta.DateTimeOriginal ?? meta.CreateDate ?? meta.CreationDate;
-      if (created instanceof Date && !Number.isNaN(created.getTime())) {
-        fields.createdAt = created.toISOString();
-      }
-      signals.push(...scanValue("exif/xmp/iptc", meta));
+    } else {
+      applyMeta(await exifr.parse(bytes, { tiff: true, exif: true, xmp: true, iptc: true }));
     }
   } catch (err) {
     notes.push(`EXIF/XMP/IPTC read failed: ${err instanceof Error ? err.message : String(err)}`);
