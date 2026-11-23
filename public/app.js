@@ -315,7 +315,10 @@ for (const [name, value] of SWATCHES) {
   b.setAttribute("aria-label", name);
   b.setAttribute("aria-pressed", "false");
   b.style.setProperty("--swatch", value === "neutral" ? "var(--text)" : value);
-  b.addEventListener("click", () => applyAccent(value));
+  b.addEventListener("click", () => {
+    applyAccent(value);
+    dismissHint();
+  });
   palette.append(b);
 }
 applyAccent(savedAccent());
@@ -406,7 +409,8 @@ function dismissHint() {
   }
 }
 try {
-  if (localStorage.getItem("hintSeen")) hint?.remove();
+  if (new URLSearchParams(location.search).has("hint")) localStorage.removeItem("hintSeen");
+  else if (localStorage.getItem("hintSeen")) hint?.remove();
 } catch {
 }
 function keepOnScreen(menu) {
@@ -435,7 +439,6 @@ function toggle(menu, button) {
 }
 identityBtn.addEventListener("click", (e) => {
   e.stopPropagation();
-  dismissHint();
   toggle(palette, identityBtn);
 });
 clockBtn.addEventListener("click", (e) => {

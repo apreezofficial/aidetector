@@ -325,7 +325,10 @@ for (const [name, value] of SWATCHES) {
   b.setAttribute("aria-label", name);
   b.setAttribute("aria-pressed", "false");
   b.style.setProperty("--swatch", value === "neutral" ? "var(--text)" : value);
-  b.addEventListener("click", () => applyAccent(value));
+  b.addEventListener("click", () => {
+    applyAccent(value);
+    dismissHint(); // picking a colour is what the hint was asking for
+  });
   palette.append(b);
 }
 applyAccent(savedAccent());
@@ -454,7 +457,8 @@ setInterval(paintClock, 15000);
 
 // ---- header: open / close menus ----
 
-// The "click me" note goes away for good after the first click.
+// The "click me" note stays until the visitor actually picks a colour (just opening the
+// picker to look doesn't count). Adding ?hint to the address shows it again.
 const hint = document.getElementById("hint");
 function dismissHint(): void {
   hint?.remove();
@@ -465,7 +469,8 @@ function dismissHint(): void {
   }
 }
 try {
-  if (localStorage.getItem("hintSeen")) hint?.remove();
+  if (new URLSearchParams(location.search).has("hint")) localStorage.removeItem("hintSeen");
+  else if (localStorage.getItem("hintSeen")) hint?.remove();
 } catch {
   /* storage unavailable */
 }
@@ -500,7 +505,6 @@ function toggle(menu: HTMLElement, button: HTMLButtonElement): void {
 
 identityBtn.addEventListener("click", (e) => {
   e.stopPropagation();
-  dismissHint();
   toggle(palette, identityBtn);
 });
 clockBtn.addEventListener("click", (e) => {
