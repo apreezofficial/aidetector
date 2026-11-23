@@ -463,4 +463,9 @@ html { accent-color: var(--accent); }
 @media (max-width: 480px) {
   .page { padding-top: 48px; }
   .row { grid-template-columns: 1fr; gap: 0; }
+
+  /* On phones the header is just the round icon (it still opens the colour picker)
+     and the clock. The name stays available to screen readers via the page's h1. */
+  .pill-text { display: none; }
+  .pill { padding-right: 0; }
 }

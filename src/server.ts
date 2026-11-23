@@ -49,12 +49,17 @@ export function createApp(): Express {
   const app = express();
   app.disable("x-powered-by");
 
-  app.get("/", (_req, res, next) => {
-    if (!indexHtml) {
+  app.get("/", async (_req, res, next) => {
+    // On Vercel, use the copy read at startup. Anywhere else, re-read the file so
+    // edits to the page show without restarting the server.
+    const html = process.env.VERCEL
+      ? indexHtml
+      : await fs.readFile(new URL("../public/index.html", import.meta.url)).catch(() => indexHtml);
+    if (!html) {
       next(); // falls through to express.static below
       return;
     }
-    res.type("html").send(indexHtml);
+    res.type("html").send(html);
   });
 
   // public/ sits next to src/ (and next to dist/), so ".." works for both.
