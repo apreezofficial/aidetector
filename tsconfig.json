@@ -5,6 +5,9 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2023"],
     "types": ["node"],
+    // Explicit, because Vercel compiles from a temporary config in another folder
+    // and otherwise can't find @types/node (error TS2688).
+    "typeRoots": ["./node_modules/@types"],
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,

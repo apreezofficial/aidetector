@@ -1,6 +1,17 @@
-import { Reader } from "@contentauth/c2pa-node";
 import { scanValue, identifyTool, aiLevelOf, cleanCompany } from "./signatures.js";
 import type { Fields, Provenance, Signal } from "./types.js";
+
+// The C2PA reader is a native library that is downloaded at install time. Load
+// it on first use so that, if it is missing on a host, the server still starts
+// and everything else (EXIF, XMP, Office, PDF fields) keeps working.
+type C2paModule = typeof import("@contentauth/c2pa-node");
+type C2paReader = Awaited<ReturnType<C2paModule["Reader"]["fromAsset"]>>;
+
+let c2paModule: Promise<C2paModule | null> | undefined;
+function loadC2pa(): Promise<C2paModule | null> {
+  c2paModule ??= import("@contentauth/c2pa-node").catch(() => null);
+  return c2paModule;
+}
 
 // File types the C2PA SDK can read a manifest from.
 export const C2PA_MIME_TYPES: ReadonlySet<string> = new Set([
@@ -158,9 +169,15 @@ export async function inspectC2pa(filePath: string, mimeType: string): Promise<C
   const out: C2paResult = { fields: {}, signals: [], notes: [], provenance: null };
   if (!C2PA_MIME_TYPES.has(mimeType)) return out;
 
-  let reader: Awaited<ReturnType<typeof Reader.fromAsset>> | null = null;
+  const c2pa = await loadC2pa();
+  if (!c2pa) {
+    out.notes.push("Content Credentials (C2PA) could not be checked: the reader is not available on this server");
+    return out;
+  }
+
+  let reader: C2paReader | null = null;
   try {
-    reader = await Reader.fromAsset({ path: filePath, mimeType });
+    reader = await c2pa.Reader.fromAsset({ path: filePath, mimeType });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/no manifest|manifest.*not found|ManifestNotFound/i.test(msg)) {

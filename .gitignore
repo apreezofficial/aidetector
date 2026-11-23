@@ -1,4 +1,2 @@
 node_modules/
 dist/
-# built from client/ by npm run build:client
-public/app.js

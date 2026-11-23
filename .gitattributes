@@ -1,0 +1,2 @@
+# The committed bundle is build output, so keep it out of GitHub's language stats.
+public/app.js linguist-generated=true

@@ -1,6 +1,9 @@
 import { identifyTool } from "./signatures.js";
 import type { Provenance, Report, Summary, Tone } from "./types.js";
 
+// Notes written by src/c2pa.ts when the credentials could not be read.
+const C2PA_UNCHECKED = /C2PA read failed|C2PA parse failed|\(C2PA\) could not be checked/;
+
 /**
  * The short answer shown at the top: status, which AI (and company), which
  * model, and when it was made. Any part we can't find is null.
@@ -30,8 +33,14 @@ export function buildSummary(report: Report, provenance: Provenance | null | und
       tone = "found";
       break;
     case "no-ai-signature-found":
-      status = "No AI signature found";
-      tone = "clear";
+      // If Content Credentials couldn't be read, "nothing found" would overstate what we know.
+      if (report.notes.some((n) => C2PA_UNCHECKED.test(n))) {
+        status = "No AI signature found (Content Credentials couldn't be checked)";
+        tone = "";
+      } else {
+        status = "No AI signature found";
+        tone = "clear";
+      }
       break;
     case "no-metadata-to-check":
       status = "This file type has no metadata to check";

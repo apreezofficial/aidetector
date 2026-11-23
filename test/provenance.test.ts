@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import sharp from "sharp";
 import { summarizeStore, type C2paManifest, type C2paStore } from "../src/c2pa.js";
 import { aiLevelOf, cleanCompany, identifyTool } from "../src/signatures.js";
 import { inspectFile } from "../src/index.js";
@@ -163,11 +164,50 @@ test("jpeg with IPTC AI source type in XMP is flagged, with the tool named", asy
 });
 
 test("clean jpeg has an empty summary with a clear status", async () => {
+  // A real (tiny) JPEG with no credentials, so the C2PA reader can parse it.
   const file = path.join(dir, "clean.jpg");
-  await fs.writeFile(file, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+  await sharp({ create: { width: 4, height: 4, channels: 3, background: "#ffffff" } }).jpeg().toFile(file);
   const r = await inspectFile(file);
   assert.equal(r.verdict, "no-ai-signature-found");
   assert.ok(r.summary);
   assert.equal(r.summary.status, "No AI signature found");
+  assert.equal(r.summary.tone, "clear");
   assert.equal(r.summary.tool, null);
+});
+
+test("a file the C2PA reader cannot parse gets the honest status, not an all-clear", async () => {
+  const file = path.join(dir, "unreadable.jpg");
+  await fs.writeFile(file, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+  const r = await inspectFile(file);
+  assert.equal(r.verdict, "no-ai-signature-found");
+  assert.ok(r.summary);
+  assert.match(r.summary.status, /couldn't be checked/);
+});
+
+// ---- honest status when Content Credentials couldn't be read ----
+import { buildSummary } from "../src/summary.js";
+import type { Report } from "../src/types.js";
+
+function reportWith(notes: string[]): Report {
+  return {
+    file: "x.png", kind: "image", verdict: "no-ai-signature-found", summary: null,
+    signals: [], fields: {}, notes, disclaimer: "",
+  };
+}
+
+test("status says so when C2PA could not be read, instead of a plain all-clear", () => {
+  for (const note of [
+    "C2PA read failed: Cannot find module './index.node'",
+    "Content Credentials (C2PA) could not be checked: the reader is not available on this server",
+  ]) {
+    const s = buildSummary(reportWith([note]), null);
+    assert.match(s.status, /couldn't be checked/);
+    assert.equal(s.tone, "");
+  }
+});
+
+test("a file with no credentials at all still gets the plain all-clear", () => {
+  const s = buildSummary(reportWith([]), null);
+  assert.equal(s.status, "No AI signature found");
+  assert.equal(s.tone, "clear");
 });
