@@ -1,0 +1,41 @@
+#!/usr/bin/env node
+import { inspectFile } from "../src/index.js";
+
+const LABELS = {
+  "ai-signature-found": "AI tool signature FOUND",
+  "no-ai-signature-found": "No AI tool signature found",
+  "no-metadata-to-check": "Nothing to check (no metadata format)",
+  unsupported: "Unsupported file type",
+  error: "Error reading file",
+};
+
+const args = process.argv.slice(2);
+const asJson = args.includes("--json");
+const files = args.filter((a) => !a.startsWith("--"));
+
+if (files.length === 0) {
+  console.error("Usage: aidetect <file> [more files...] [--json]");
+  process.exit(2);
+}
+
+const reports = [];
+for (const file of files) {
+  reports.push(await inspectFile(file));
+}
+
+if (asJson) {
+  console.log(JSON.stringify(reports.length === 1 ? reports[0] : reports, null, 2));
+} else {
+  for (const r of reports) {
+    console.log(`\n${r.file}`);
+    console.log(`  Result: ${LABELS[r.verdict] ?? r.verdict}`);
+    for (const s of r.signals) {
+      console.log(`  - matched "${s.match}" in ${s.source} at ${s.field}`);
+    }
+    for (const [k, v] of Object.entries(r.fields)) {
+      console.log(`  ${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`);
+    }
+    for (const n of r.notes) console.log(`  note: ${n}`);
+  }
+  console.log(`\n${reports[0].disclaimer}`);
+}
