@@ -1,0 +1,31 @@
+{
+  "name": "aidetector",
+  "version": "1.0.0",
+  "description": "Local checker for AI-generation metadata (C2PA, IPTC, EXIF, Office/PDF properties)",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/",
+    "detect": "node bin/aidetect.js",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apreezofficial/aidetector.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/apreezofficial/aidetector/issues"
+  },
+  "homepage": "https://github.com/apreezofficial/aidetector#readme",
+  "dependencies": {
+    "@contentauth/c2pa-node": "^0.12.1",
+    "exifr": "^7.1.3",
+    "express": "^5.3.0",
+    "jszip": "^3.10.2",
+    "multer": "^2.5.0",
+    "pdf-lib": "^1.17.1"
+  }
+}
