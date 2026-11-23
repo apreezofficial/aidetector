@@ -34,7 +34,11 @@ npm start            # node dist/server.js
 
 Open http://localhost:3000, then drop a file anywhere on the page or choose one. The top of the result gives three lines: the status, which AI tool (and company) and model, and when it was made. Everything else is under "Full details". Uploads are deleted right after each check. Set `PORT` to use a different port.
 
-To host it, run `npm install && npm run build` as the build step and `npm start` as the start command.
+To host it on a server, run `npm install && npm run build` as the build step and `npm start` as the start command.
+
+### Vercel
+
+Import the repo with the Express preset; `vercel.json` sets the build command. Uploads are capped at 4 MB there (Vercel's request limit; 25 MB elsewhere). The link-preview tags need a full address, which is set to `https://aidetector.apcodesphere.xyz` in `public/index.html`, `robots.txt`, and `sitemap.xml`. To build for a different address (a fork or a staging site), set `SITE_URL` and the build swaps it in.
 
 ## Command line
 
@@ -61,5 +65,7 @@ Tests build their own DOCX, PDF, PNG, and JPEG fixtures in a temp folder.
 - `src/c2pa.ts`, `src/image.ts`, `src/office.ts`, `src/pdf.ts`: per-format readers.
 - `src/summary.ts`: the three-line summary.
 - `src/server.ts`: upload server. `src/cli.ts`: command-line entry point.
-- `client/app.ts`, `client/time.ts`: the page's script (bundled to `public/app.js`, not committed).
-- `public/`: HTML, CSS, and the sample files.
+- `client/app.ts`, `client/time.ts`: the page's script, bundled to `public/app.js`. That bundle **is committed**: Vercel picks the files in `public/` before it runs the build, so a script made only during the build would never be published. `npm test` fails if the committed copy is stale; fix it with `npm run build:client`.
+- `public/`: HTML, CSS, icons, the link-preview image, and the sample files.
+- `scripts/make-images.mjs`: regenerates the preview image and icons (`npm run images`).
+- `scripts/site-url.mjs`: points the page's meta tags at the real site address during the build.

@@ -3,8 +3,52 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Provenance Check</title>
-  <meta name="description" content="Check a file's metadata for signs that an AI tool created or edited it.">
+  <title>AI Provenance Check – See if a file was made with AI</title>
+  <meta name="description" content="Check a file's metadata for signs an AI tool made it. See the tool, model, and creation date for images, PDFs, and Office files. Nothing is stored.">
+  <meta name="robots" content="index, follow">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+  <link rel="canonical" href="https://aidetector.apcodesphere.xyz/">
+
+  <!-- Icons -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Link previews (Open Graph and X/Twitter). The site address below is
+       replaced at build time by scripts/site-url.mjs when SITE_URL or the host's
+       production URL is set. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AI Provenance Check">
+  <meta property="og:title" content="AI Provenance Check">
+  <meta property="og:description" content="See which AI tool made a file, which model, and when. Reads the file's own metadata. Nothing is stored.">
+  <meta property="og:url" content="https://aidetector.apcodesphere.xyz/">
+  <meta property="og:image" content="https://aidetector.apcodesphere.xyz/og-image.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="AI Provenance Check: was this file made with AI? An example result reads Made with AI, by ChatGPT (OpenAI), model gpt-image, created Nov 19, 2026.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI Provenance Check">
+  <meta name="twitter:description" content="See which AI tool made a file, which model, and when. Reads the file's own metadata. Nothing is stored.">
+  <meta name="twitter:image" content="https://aidetector.apcodesphere.xyz/og-image.png">
+  <meta name="twitter:image:alt" content="An example result: Made with AI, by ChatGPT (OpenAI), model gpt-image, created Nov 19, 2026.">
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "AI Provenance Check",
+      "url": "https://aidetector.apcodesphere.xyz/",
+      "description": "Check a file's metadata for signs an AI tool made it. See the tool, model, and creation date for images, PDFs, and Office files.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "image": "https://aidetector.apcodesphere.xyz/og-image.png"
+    }
+  </script>
+
   <link rel="stylesheet" href="/styles.css">
   <script>
     // Apply the saved theme before first paint to avoid a flash.
