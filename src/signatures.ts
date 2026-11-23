@@ -2,17 +2,25 @@
 // Expect occasional false positives (a person named "Claude" in a title field);
 // the report always shows the exact text that matched.
 
+import type { AiLevel, Signal } from "./types.js";
+
 // IPTC "digitalSourceType" values that mean AI was involved.
-export const AI_DIGITAL_SOURCE_TYPES = [
+export const AI_DIGITAL_SOURCE_TYPES: readonly string[] = [
   "trainedAlgorithmicMedia",
   "compositeWithTrainedAlgorithmicMedia",
   "compositeSynthetic",
   "algorithmicMedia",
 ];
 
+export interface AiToolEntry {
+  pattern: RegExp;
+  /** null means the text only tells us the company. */
+  tool: string | null;
+  provider: string | null;
+}
+
 // One table drives matching, the tool name, and the company name.
-// tool: null means the text only tells us the company.
-export const AI_TOOLS = [
+export const AI_TOOLS: readonly AiToolEntry[] = [
   { pattern: /\bchatgpt\b/i, tool: "ChatGPT", provider: "OpenAI" },
   { pattern: /\bdall[-\s·]?e\b/i, tool: "DALL·E", provider: "OpenAI" },
   { pattern: /\bsora\b/i, tool: "Sora", provider: "OpenAI" },
@@ -39,8 +47,8 @@ export const AI_TOOLS = [
   { pattern: /"class_type"\s*:/, tool: "ComfyUI", provider: null },
 ];
 
-// Returns the matched text, or null.
-export function matchAiText(text) {
+/** Returns the matched text, or null. */
+export function matchAiText(text: unknown): string | null {
   if (typeof text !== "string" || text.length === 0) return null;
   for (const type of AI_DIGITAL_SOURCE_TYPES) {
     if (text.includes(type)) return type;
@@ -52,8 +60,13 @@ export function matchAiText(text) {
   return null;
 }
 
-// Names the tool and company in a piece of text, or null.
-export function identifyTool(text) {
+export interface ToolIdentity {
+  tool: string | null;
+  provider: string | null;
+}
+
+/** Names the tool and company in a piece of text, or null. */
+export function identifyTool(text: unknown): ToolIdentity | null {
   if (typeof text !== "string") return null;
   for (const { pattern, tool, provider } of AI_TOOLS) {
     if (pattern.test(text)) return { tool, provider };
@@ -61,19 +74,21 @@ export function identifyTool(text) {
   return null;
 }
 
-// How much AI was involved, from an IPTC digitalSourceType value.
-//   "generated": made by an AI model
-//   "edited":    a real source combined with AI-made elements
-// "algorithmicallyEnhanced" (filters, upscaling) is deliberately not counted.
-export function aiLevelOf(uri) {
+/**
+ * How much AI was involved, from an IPTC digitalSourceType value.
+ *   "generated": made by an AI model
+ *   "edited":    a real source combined with AI-made elements
+ * "algorithmicallyEnhanced" (filters, upscaling) is deliberately not counted.
+ */
+export function aiLevelOf(uri: unknown): AiLevel | null {
   if (typeof uri !== "string") return null;
   if (uri.includes("compositeWithTrainedAlgorithmicMedia") || uri.includes("compositeSynthetic")) return "edited";
   if (uri.includes("trainedAlgorithmicMedia") || /algorithmicMedia$/.test(uri)) return "generated";
   return null;
 }
 
-// "OpenAI OpCo, LLC" -> "OpenAI", "Google LLC" -> "Google".
-export function cleanCompany(name) {
+/** "OpenAI OpCo, LLC" -> "OpenAI", "Google LLC" -> "Google". */
+export function cleanCompany(name: unknown): string | null {
   if (typeof name !== "string") return null;
   const cleaned = name
     .replace(/[,\s]+(LLC|L\.L\.C\.|Inc\.?|Ltd\.?|Limited|Corp\.?|Corporation|OpCo)\b\.?/gi, "")
@@ -82,9 +97,17 @@ export function cleanCompany(name) {
   return cleaned || null;
 }
 
-// Walks any parsed metadata and records every string that matches.
-// `skipKeys` lists fields that hold people's names, which we don't match on.
-export function scanValue(source, value, path = "", out = [], skipKeys = []) {
+/**
+ * Walks any parsed metadata and records every string that matches.
+ * `skipKeys` lists fields that hold people's names, which we don't match on.
+ */
+export function scanValue(
+  source: string,
+  value: unknown,
+  path = "",
+  out: Signal[] = [],
+  skipKeys: readonly string[] = []
+): Signal[] {
   if (value == null) return out;
   if (typeof value === "string") {
     const match = matchAiText(value);

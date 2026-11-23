@@ -1,11 +1,14 @@
 import { identifyTool } from "./signatures.js";
+import type { Provenance, Report, Summary, Tone } from "./types.js";
 
-// The short answer shown at the top: status, which AI (and company), which
-// model, and when it was made. Any part we can't find is null.
-export function buildSummary(report, provenance) {
-  const p = provenance ?? {};
-  let tool = p.tool ?? null;
-  let provider = p.provider ?? null;
+/**
+ * The short answer shown at the top: status, which AI (and company), which
+ * model, and when it was made. Any part we can't find is null.
+ */
+export function buildSummary(report: Report, provenance: Provenance | null | undefined): Summary {
+  const p = provenance ?? null;
+  let tool = p?.tool ?? null;
+  let provider = p?.provider ?? null;
 
   // No C2PA? Fall back to the first matched signal that names a tool or company.
   if (!tool && !provider) {
@@ -19,11 +22,11 @@ export function buildSummary(report, provenance) {
     }
   }
 
-  let status;
-  let tone;
+  let status: string;
+  let tone: Tone;
   switch (report.verdict) {
     case "ai-signature-found":
-      status = p.aiLevel === "edited" ? "Edited with AI" : p.aiLevel === "generated" ? "Made with AI" : "AI tool signature found";
+      status = p?.aiLevel === "edited" ? "Edited with AI" : p?.aiLevel === "generated" ? "Made with AI" : "AI tool signature found";
       tone = "found";
       break;
     case "no-ai-signature-found":
@@ -44,12 +47,13 @@ export function buildSummary(report, provenance) {
   }
 
   const found = report.verdict === "ai-signature-found";
+  const createdFromFields = report.fields.createdAt;
   return {
     status,
     tone,
     tool: found ? tool : null,
     provider: found ? provider : null,
-    model: found ? p.model ?? null : null,
-    createdAt: found ? p.createdAt ?? report.fields.createdAt ?? null : null,
+    model: found ? p?.model ?? null : null,
+    createdAt: found ? p?.createdAt ?? (typeof createdFromFields === "string" ? createdFromFields : null) : null,
   };
 }

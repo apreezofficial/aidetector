@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { summarizeStore } from "../src/c2pa.js";
+import { summarizeStore, type C2paManifest, type C2paStore } from "../src/c2pa.js";
 import { aiLevelOf, cleanCompany, identifyTool } from "../src/signatures.js";
 import { inspectFile } from "../src/index.js";
 
 const TRAINED = "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia";
 
-function store(manifests, active = Object.keys(manifests)[0]) {
+function store(manifests: Record<string, C2paManifest>, active: string = Object.keys(manifests)[0] ?? ""): C2paStore {
   return { active_manifest: active, manifests, validation_state: "Valid" };
 }
 
@@ -61,6 +61,7 @@ test("PNG-style manifest: tool in softwareAgent.name, model in .version", () => 
       },
     })
   );
+  assert.ok(provenance);
   assert.equal(provenance.tool, "ChatGPT");
   assert.equal(provenance.model, "gpt-image");
   assert.equal(provenance.provider, "OpenAI");
@@ -76,6 +77,7 @@ test("agent name that is only the tool does not become the model", () => {
       },
     })
   );
+  assert.ok(provenance);
   assert.equal(provenance.tool, "ChatGPT");
   assert.equal(provenance.model, null);
 });
@@ -98,6 +100,7 @@ test("a later edit by another app does not hide the AI origin", () => {
       "edit"
     )
   );
+  assert.ok(provenance);
   assert.equal(provenance.tool, "Midjourney");
   assert.equal(provenance.aiLevel, "generated");
   assert.equal(provenance.createdAt, "2026-01-02T03:04:05Z");
@@ -113,7 +116,13 @@ test("algorithmic enhancement alone is not counted as AI", () => {
       },
     })
   );
+  assert.ok(provenance);
   assert.equal(provenance.aiLevel, null);
+});
+
+test("an empty store gives no provenance", () => {
+  assert.deepEqual(summarizeStore({}), { fields: {}, provenance: null });
+  assert.deepEqual(summarizeStore(null), { fields: {}, provenance: null });
 });
 
 test("aiLevelOf, cleanCompany and identifyTool helpers", () => {
@@ -127,13 +136,13 @@ test("aiLevelOf, cleanCompany and identifyTool helpers", () => {
 });
 
 // ---- image with the AI marker only in XMP (the usual place outside C2PA) ----
-let dir;
+let dir: string;
 before(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "aidetect-prov-"));
 });
 after(() => fs.rm(dir, { recursive: true, force: true }));
 
-function jpegWithXmp(xml) {
+function jpegWithXmp(xml: string): Buffer {
   const ns = Buffer.from("http://ns.adobe.com/xap/1.0/\0", "latin1");
   const body = Buffer.concat([ns, Buffer.from(xml, "utf8")]);
   const len = Buffer.alloc(2);
@@ -147,6 +156,7 @@ test("jpeg with IPTC AI source type in XMP is flagged, with the tool named", asy
   await fs.writeFile(file, jpegWithXmp(xmp));
   const r = await inspectFile(file);
   assert.equal(r.verdict, "ai-signature-found");
+  assert.ok(r.summary);
   assert.equal(r.summary.tool, "Midjourney");
   assert.equal(r.summary.provider, "Midjourney");
   assert.equal(r.summary.status, "AI tool signature found");
@@ -157,6 +167,7 @@ test("clean jpeg has an empty summary with a clear status", async () => {
   await fs.writeFile(file, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
   const r = await inspectFile(file);
   assert.equal(r.verdict, "no-ai-signature-found");
+  assert.ok(r.summary);
   assert.equal(r.summary.status, "No AI signature found");
   assert.equal(r.summary.tool, null);
 });

@@ -2,11 +2,19 @@ import fs from "node:fs/promises";
 import exifr from "exifr";
 import { scanValue } from "./signatures.js";
 import { inspectC2pa } from "./c2pa.js";
+import type { Fields, Inspection, Signal } from "./types.js";
 
-// Reads PNG text chunks (tEXt / iTXt). ChatGPT-style tools and Stable
-// Diffusion UIs often store generation parameters here.
-export function pngTextChunks(buf) {
-  const out = [];
+export interface PngTextChunk {
+  key: string;
+  value: string;
+}
+
+/**
+ * Reads PNG text chunks (tEXt / iTXt). Stable Diffusion UIs and some other
+ * tools store generation parameters here.
+ */
+export function pngTextChunks(buf: Buffer): PngTextChunk[] {
+  const out: PngTextChunk[] = [];
   if (buf.length < 8 || buf.readUInt32BE(0) !== 0x89504e47) return out;
   let off = 8;
   while (off + 8 <= buf.length) {
@@ -20,8 +28,7 @@ export function pngTextChunks(buf) {
       const i = data.indexOf(0);
       if (i >= 0) {
         const compressed = data[i + 1] === 1;
-        let p = i + 3; // skip compression flag + method
-        const langEnd = data.indexOf(0, p);
+        const langEnd = data.indexOf(0, i + 3); // skip compression flag + method
         if (langEnd >= 0) {
           const transEnd = data.indexOf(0, langEnd + 1);
           if (transEnd >= 0 && !compressed) {
@@ -36,15 +43,20 @@ export function pngTextChunks(buf) {
   return out;
 }
 
-export async function inspectImage(filePath, mimeType) {
-  const signals = [];
-  const fields = {};
-  const notes = [];
+export async function inspectImage(filePath: string, mimeType: string): Promise<Inspection> {
+  const signals: Signal[] = [];
+  const fields: Fields = {};
+  const notes: string[] = [];
 
-  // EXIF / XMP / IPTC via exifr (covers JPEG, PNG-XMP, WebP, AVIF, TIFF).
+  // EXIF / XMP / IPTC via exifr (covers JPEG, PNG-XMP, WebP, AVIF, TIFF, HEIC).
   try {
     const bytes = await fs.readFile(filePath);
-    const meta = await exifr.parse(bytes, { tiff: true, exif: true, xmp: true, iptc: true });
+    const meta: Record<string, unknown> | undefined = await exifr.parse(bytes, {
+      tiff: true,
+      exif: true,
+      xmp: true,
+      iptc: true,
+    });
     if (meta) {
       for (const key of ["Software", "CreatorTool", "Make", "Model", "DigitalSourceType"]) {
         if (meta[key] !== undefined) fields[key] = String(meta[key]);
@@ -56,7 +68,7 @@ export async function inspectImage(filePath, mimeType) {
       signals.push(...scanValue("exif/xmp/iptc", meta));
     }
   } catch (err) {
-    notes.push(`EXIF/XMP/IPTC read failed: ${err.message}`);
+    notes.push(`EXIF/XMP/IPTC read failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // PNG text chunks.
@@ -69,7 +81,7 @@ export async function inspectImage(filePath, mimeType) {
         signals.push(...scanValue("png-text", { [c.key]: c.value }));
       }
     } catch (err) {
-      notes.push(`PNG text read failed: ${err.message}`);
+      notes.push(`PNG text read failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

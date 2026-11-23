@@ -9,7 +9,7 @@ import { inspectFile } from "../src/index.js";
 import { matchAiText } from "../src/signatures.js";
 import { pngTextChunks } from "../src/image.js";
 
-let dir;
+let dir: string;
 before(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "aidetect-test-"));
 });
@@ -17,7 +17,7 @@ after(async () => {
   await fs.rm(dir, { recursive: true, force: true });
 });
 
-async function makeDocx(name, appXml) {
+async function makeDocx(name: string, appXml: string): Promise<string> {
   const zip = new JSZip();
   zip.file("[Content_Types].xml", "<Types/>");
   zip.file("docProps/app.xml", appXml);
@@ -26,7 +26,7 @@ async function makeDocx(name, appXml) {
   return file;
 }
 
-async function makePdf(name, producer) {
+async function makePdf(name: string, producer: string): Promise<string> {
   const doc = await PDFDocument.create();
   doc.addPage();
   doc.setProducer(producer);
@@ -37,8 +37,8 @@ async function makePdf(name, producer) {
 
 // Minimal PNG: signature, IHDR, one tEXt chunk, IEND. CRCs are not checked by
 // our parser, so they are left zeroed.
-function makePng(keyword, text) {
-  const chunk = (type, data) => {
+function makePng(keyword: string, text: string): Buffer {
+  const chunk = (type: string, data: Buffer): Buffer => {
     const len = Buffer.alloc(4);
     len.writeUInt32BE(data.length);
     return Buffer.concat([len, Buffer.from(type, "ascii"), data, Buffer.alloc(4)]);

@@ -1,10 +1,11 @@
 import fs from "node:fs/promises";
 import { PDFDocument } from "pdf-lib";
 import { scanValue } from "./signatures.js";
+import type { Fields, Inspection } from "./types.js";
 
-export async function inspectPdf(filePath) {
-  const fields = {};
-  const notes = [];
+export async function inspectPdf(filePath: string): Promise<Inspection> {
+  const fields: Fields = {};
+  const notes: string[] = [];
   const bytes = await fs.readFile(filePath);
   const doc = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false });
 
@@ -25,5 +26,5 @@ export async function inspectPdf(filePath) {
 
   // The author field holds a person's name, so it isn't matched.
   const signals = scanValue("pdf-info", values, "", [], ["author"]);
-  return { fields, signals, notes };
+  return { fields, signals, notes, provenance: null };
 }

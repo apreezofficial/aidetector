@@ -1,8 +1,9 @@
 import fs from "node:fs/promises";
 import JSZip from "jszip";
 import { scanValue } from "./signatures.js";
+import type { Fields, Inspection, Signal } from "./types.js";
 
-const PROPERTY_PARTS = ["docProps/app.xml", "docProps/core.xml", "docProps/custom.xml"];
+const PROPERTY_PARTS = ["docProps/app.xml", "docProps/core.xml", "docProps/custom.xml"] as const;
 const TAGS = [
   "Application",
   "AppVersion",
@@ -17,15 +18,21 @@ const TAGS = [
   "description",
   "created",
   "modified",
-];
+] as const;
 // Fields that hold people's names; we show them but don't match AI names in them.
 const PERSON_FIELDS = ["creator", "lastModifiedBy", "Manager"];
 
-// Works for .docx, .xlsx and .pptx (all Office Open XML zip packages).
-export async function inspectOffice(filePath) {
-  const fields = {};
-  const signals = [];
-  const notes = [];
+function toIso(value: string | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/** Works for .docx, .xlsx and .pptx (all Office Open XML zip packages). */
+export async function inspectOffice(filePath: string): Promise<Inspection> {
+  const raw: Record<string, string> = {};
+  const signals: Signal[] = [];
+  const notes: string[] = [];
   const zip = await JSZip.loadAsync(await fs.readFile(filePath));
 
   for (const part of PROPERTY_PARTS) {
@@ -35,24 +42,21 @@ export async function inspectOffice(filePath) {
     for (const tag of TAGS) {
       const re = new RegExp(`<(?:[\\w]+:)?${tag}[^>]*>([^<]*)</(?:[\\w]+:)?${tag}>`);
       const m = xml.match(re);
-      if (m && m[1].trim() && fields[tag] === undefined) fields[tag] = m[1].trim();
+      const text = m?.[1]?.trim();
+      if (text && raw[tag] === undefined) raw[tag] = text;
     }
     // Custom properties can hold arbitrary labels, so scan that part whole.
     if (part.endsWith("custom.xml")) signals.push(...scanValue(`office:${part}`, xml));
   }
 
-  signals.push(...scanValue("office:properties", fields, "", [], PERSON_FIELDS));
+  signals.push(...scanValue("office:properties", raw, "", [], PERSON_FIELDS));
 
-  if (fields.created) {
-    const d = new Date(fields.created);
-    if (!Number.isNaN(d.getTime())) fields.createdAt = d.toISOString();
-    delete fields.created;
-  }
-  if (fields.modified) {
-    const d = new Date(fields.modified);
-    if (!Number.isNaN(d.getTime())) fields.modifiedAt = d.toISOString();
-    delete fields.modified;
-  }
+  const { created, modified, ...rest } = raw;
+  const fields: Fields = { ...rest };
+  const createdAt = toIso(created);
+  const modifiedAt = toIso(modified);
+  if (createdAt) fields.createdAt = createdAt;
+  if (modifiedAt) fields.modifiedAt = modifiedAt;
 
   if (Object.keys(fields).length === 0) notes.push("no document properties found");
   return { fields, signals, notes, provenance: null };

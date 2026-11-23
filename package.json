@@ -2,11 +2,17 @@
   "name": "aidetector",
   "version": "1.0.0",
   "description": "Local checker for AI-generation metadata (C2PA, IPTC, EXIF, Office/PDF properties)",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "test": "node --test test/",
-    "detect": "node bin/aidetect.js",
-    "start": "node server.js"
+    "test": "tsx --test test/*.test.ts",
+    "detect": "tsx src/cli.ts",
+    "start": "node dist/server.js",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "tsc -p tsconfig.build.json",
+    "build:client": "esbuild client/app.ts --bundle --format=esm --target=es2022 --outfile=public/app.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p client/tsconfig.json",
+    "dev": "npm run build:client && tsx src/server.ts",
+    "check": "npm run typecheck && npm test"
   },
   "repository": {
     "type": "git",
@@ -27,5 +33,16 @@
     "jszip": "^3.10.2",
     "multer": "^2.5.0",
     "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "bin": {
+    "aidetect": "dist/cli.js"
   }
 }
