@@ -220,7 +220,7 @@ function buildCard(shadow, options) {
     trigger.append(art);
   }
   const label = node("span", "trigger-label", "Created by ");
-  label.append(node("strong", "", profile.name || PROFILE.name));
+  label.append(node("strong", "", options.profile?.name || "Apcodesphere"));
   const chevron = node("span", "chevron", "\u2303");
   chevron.setAttribute("aria-hidden", "true");
   trigger.append(label, chevron);
