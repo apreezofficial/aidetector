@@ -514,5 +514,6 @@ document.addEventListener("keydown", (e) => {
 // Profile drawer options can be tailored for this site.
 const drawerOptions: ProfileWidgetOptions = {
   currenturl: "https://aidetector.apcodesphere.xyz",
+  accent: "var(--accent)",
 };
 mountProfileWidget(drawerOptions);

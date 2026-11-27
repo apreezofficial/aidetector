@@ -469,3 +469,13 @@ html { accent-color: var(--accent); }
   .pill-text { display: none; }
   .pill { padding-right: 0; }
 }
+
+/* Keep the profile drawer in sync with the selected site theme. */
+#apreez-profile-widget {
+  --apw-bg: var(--bg);
+  --apw-text: var(--text);
+  --apw-muted: color-mix(in srgb, var(--muted) 80%, var(--text));
+  --apw-border: var(--line);
+  --apw-surface: var(--soft);
+  --apw-surface-hover: color-mix(in srgb, var(--soft) 80%, var(--accent));
+}
