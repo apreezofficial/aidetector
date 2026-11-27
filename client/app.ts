@@ -1,3 +1,4 @@
+import { mountProfileWidget, type ProfileWidgetOptions } from "apreez-profile-widget";
 import type { Report, Summary } from "../src/types.js";
 import { apartLabel, cityName, dayPercent, formatClock, offsetMinutes, shortDate } from "./time.js";
 
@@ -509,3 +510,9 @@ document.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeMenus();
 });
+
+// Profile drawer options can be tailored for this site.
+const drawerOptions: ProfileWidgetOptions = {
+  currenturl: "https://aidetector.apcodesphere.xyz",
+};
+mountProfileWidget(drawerOptions);
