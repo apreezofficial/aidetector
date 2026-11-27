@@ -20,7 +20,7 @@ Screenshots, re-saved copies, and files sent through apps that strip metadata lo
 
 ### OpenAI pixel watermark check
 
-Set `OPENAI_API_KEY` on the server to enable OpenAI's Content Provenance API for PNG, JPEG, and WebP uploads. The API checks OpenAI C2PA credentials and SynthID embedded in image pixels, which can survive some screenshots, re-saves, and other changes. Without the key, the app stays local and performs only its existing metadata checks. When enabled, supported images are sent to OpenAI for verification; the app itself deletes its temporary upload after the check. API access, rate limits, and data handling follow OpenAI's API terms. A missing watermark is not proof that a file is human-made.
+Set `OPENAI_API_KEY` on the server to enable OpenAI's Content Provenance API for PNG, JPEG, and WebP uploads. The API checks OpenAI C2PA credentials and SynthID embedded in image pixels, which can survive some screenshots, re-saves, and other changes. It detects supported OpenAI signals only; it does not verify images from Google or other AI providers. A detected watermark or trusted OpenAI credential is strong evidence that a supported image or PDF was processed by OpenAI tools such as ChatGPT. Not all generations carry supported signals, and a missing signal is not proof that a file is human-made. Without the key, the app performs only its existing local checks. When enabled, supported images are sent to OpenAI for verification; the app itself deletes its temporary upload after the check. API access, rate limits, and data handling follow OpenAI's API terms.
 
 It is not proof either way. Metadata is easy to remove or edit, so a missing signature doesn't mean human-made, and a found signature only shows that a tool was involved.
 

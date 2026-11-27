@@ -101,7 +101,7 @@
       </div>
     </header>
 
-    <p class="copy">Upload a file and I'll check its metadata for signs that an AI tool made it. When the server has OpenAI verification enabled, supported images also get a pixel watermark check that can still work after a screenshot or re-save.</p>
+    <p class="copy">Upload a file to check its metadata for AI tool markers. If OpenAI verification is enabled, supported images also get a pixel watermark check. That official check detects supported OpenAI signals only; it does not verify images from other AI providers.</p>
     <p class="copy" id="privacy-copy">Files are deleted after checking. If OpenAI verification is enabled, supported images are also sent to OpenAI for its provenance check.</p>
 
     <label id="dropzone" class="drop" for="file-input">
@@ -144,7 +144,7 @@
     </section>
 
     <footer class="foot">
-      <p class="fine">A detected watermark is evidence of a supported OpenAI signal. No detected signal does not prove a file is human-made. Screenshots and edits can weaken or remove signals.</p>
+      <p class="fine">A detected OpenAI watermark or trusted OpenAI credential is strong evidence that a supported image or PDF was processed by OpenAI tools such as ChatGPT. This check does not verify other AI providers. No signal found does not prove a file is human-made, and some older files or edits may lose signals.</p>
       <div class="theme" role="group" aria-label="Display theme">
         <button type="button" data-theme-choice="system">System</button>
         <button type="button" data-theme-choice="light">Light</button>
