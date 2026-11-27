@@ -101,8 +101,8 @@
       </div>
     </header>
 
-    <p class="copy">Upload a file and I'll check its metadata for signs that an AI tool made it. This only works for tools that write a marker into their files. ChatGPT records the tool, model, and date. Other tools record less, or nothing at all, and those can't be detected.</p>
-    <p class="copy">Files are inspected on this server and deleted right after. Nothing is kept.</p>
+    <p class="copy">Upload a file and I'll check its metadata for signs that an AI tool made it. When the server has OpenAI verification enabled, supported images also get a pixel watermark check that can still work after a screenshot or re-save.</p>
+    <p class="copy" id="privacy-copy">Files are deleted after checking. If OpenAI verification is enabled, supported images are also sent to OpenAI for its provenance check.</p>
 
     <label id="dropzone" class="drop" for="file-input">
       <span class="drop-title" id="drop-title">Drop a file here, or choose one</span>
@@ -144,7 +144,7 @@
     </section>
 
     <footer class="foot">
-      <p class="fine">Checks metadata only. It doesn't read visible content or detect watermarks hidden in pixels.</p>
+      <p class="fine">A detected watermark is evidence of a supported OpenAI signal. No detected signal does not prove a file is human-made. Screenshots and edits can weaken or remove signals.</p>
       <div class="theme" role="group" aria-label="Display theme">
         <button type="button" data-theme-choice="system">System</button>
         <button type="button" data-theme-choice="light">Light</button>

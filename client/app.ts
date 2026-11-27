@@ -31,11 +31,16 @@ const result = $("result");
 // The server's upload limit differs by host (25 MB normally, less on Vercel).
 let maxBytes = 25 * 1024 * 1024;
 fetch("/api/limits")
-  .then((r) => r.json() as Promise<{ maxMb: number }>)
-  .then(({ maxMb }) => {
+  .then((r) => r.json() as Promise<{ maxMb: number; openAiVerificationEnabled?: boolean }>)
+  .then(({ maxMb, openAiVerificationEnabled }) => {
     maxBytes = maxMb * 1024 * 1024;
     const hint = $("drop-hint");
     hint.textContent = (hint.textContent ?? "").replace(/up to \d+ MB/, `up to ${maxMb} MB`);
+    if (openAiVerificationEnabled === false) {
+      $("privacy-copy").textContent = "Files are inspected on this server and deleted right after. Pixel watermark checks are not enabled on this server.";
+    } else if (openAiVerificationEnabled === true) {
+      $("privacy-copy").textContent = "Files are deleted after checking. Supported images are also sent to OpenAI for its provenance check.";
+    }
   })
   .catch(() => {
     /* keep the default */
@@ -73,6 +78,12 @@ const FIELD_LABELS: Record<string, string> = {
   c2paManifestCount: "Credential records",
   c2paValidationState: "Validation",
   c2paValidationIssues: "Validation notes",
+  openAiSynthId: "OpenAI SynthID watermark",
+  openAiProvenanceC2pa: "OpenAI API Content Credentials",
+  openAiC2paValidation: "OpenAI API credential validation",
+  openAiC2paIssuer: "OpenAI API credential issuer",
+  openAiC2paModel: "OpenAI API model",
+  openAiC2paGeneratedAt: "OpenAI API creation date",
 };
 
 // ---- helpers ----

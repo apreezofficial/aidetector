@@ -67,7 +67,7 @@ export function createApp(): Express {
 
   // Lets the page show the real upload limit for wherever it is hosted.
   app.get("/api/limits", (_req, res) => {
-    res.json({ maxMb: MAX_MB });
+    res.json({ maxMb: MAX_MB, openAiVerificationEnabled: Boolean(process.env.OPENAI_API_KEY) });
   });
 
   app.post("/api/inspect", (req, res) => {

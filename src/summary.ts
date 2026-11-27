@@ -1,8 +1,7 @@
 import { identifyTool } from "./signatures.js";
 import type { Provenance, Report, Summary, Tone } from "./types.js";
 
-// Notes written by src/c2pa.ts when the credentials could not be read.
-const C2PA_UNCHECKED = /C2PA read failed|C2PA parse failed|\(C2PA\) could not be checked/;
+const CHECK_INCOMPLETE = /C2PA read failed|C2PA parse failed|\(C2PA\) could not be checked|OpenAI provenance check failed/;
 
 /**
  * The short answer shown at the top: status, which AI (and company), which
@@ -34,8 +33,8 @@ export function buildSummary(report: Report, provenance: Provenance | null | und
       break;
     case "no-ai-signature-found":
       // If Content Credentials couldn't be read, "nothing found" would overstate what we know.
-      if (report.notes.some((n) => C2PA_UNCHECKED.test(n))) {
-        status = "No AI signature found (Content Credentials couldn't be checked)";
+      if (report.notes.some((n) => CHECK_INCOMPLETE.test(n))) {
+        status = "No AI signature found (some provenance checks couldn't be completed)";
         tone = "";
       } else {
         status = "No AI signature found";

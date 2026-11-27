@@ -16,7 +16,11 @@ What it reads:
 - **Others that mark files** (Adobe Firefly, Microsoft, Midjourney, Stable Diffusion tools) are covered by the same checks, but have not been tried on real files yet.
 - **Tools that write nothing**, such as Claude, can't be detected, and neither can plain text from any tool.
 
-Screenshots, re-saved copies, and files sent through apps that strip metadata lose their markers too.
+Screenshots, re-saved copies, and files sent through apps that strip metadata lose those metadata markers. The optional OpenAI API check below can also look for pixel watermarks in supported images.
+
+### OpenAI pixel watermark check
+
+Set `OPENAI_API_KEY` on the server to enable OpenAI's Content Provenance API for PNG, JPEG, and WebP uploads. The API checks OpenAI C2PA credentials and SynthID embedded in image pixels, which can survive some screenshots, re-saves, and other changes. Without the key, the app stays local and performs only its existing metadata checks. When enabled, supported images are sent to OpenAI for verification; the app itself deletes its temporary upload after the check. API access, rate limits, and data handling follow OpenAI's API terms. A missing watermark is not proof that a file is human-made.
 
 It is not proof either way. Metadata is easy to remove or edit, so a missing signature doesn't mean human-made, and a found signature only shows that a tool was involved.
 

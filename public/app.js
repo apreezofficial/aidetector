@@ -72,10 +72,15 @@ var dropTitle = $("drop-title");
 var statusLine = $("status");
 var result = $("result");
 var maxBytes = 25 * 1024 * 1024;
-fetch("/api/limits").then((r) => r.json()).then(({ maxMb }) => {
+fetch("/api/limits").then((r) => r.json()).then(({ maxMb, openAiVerificationEnabled }) => {
   maxBytes = maxMb * 1024 * 1024;
   const hint2 = $("drop-hint");
   hint2.textContent = (hint2.textContent ?? "").replace(/up to \d+ MB/, `up to ${maxMb} MB`);
+  if (openAiVerificationEnabled === false) {
+    $("privacy-copy").textContent = "Files are inspected on this server and deleted right after. Pixel watermark checks are not enabled on this server.";
+  } else if (openAiVerificationEnabled === true) {
+    $("privacy-copy").textContent = "Files are deleted after checking. Supported images are also sent to OpenAI for its provenance check.";
+  }
 }).catch(() => {
 });
 var FIELD_LABELS = {
@@ -108,7 +113,13 @@ var FIELD_LABELS = {
   c2paAiLevel: "AI involvement",
   c2paManifestCount: "Credential records",
   c2paValidationState: "Validation",
-  c2paValidationIssues: "Validation notes"
+  c2paValidationIssues: "Validation notes",
+  openAiSynthId: "OpenAI SynthID watermark",
+  openAiProvenanceC2pa: "OpenAI API Content Credentials",
+  openAiC2paValidation: "OpenAI API credential validation",
+  openAiC2paIssuer: "OpenAI API credential issuer",
+  openAiC2paModel: "OpenAI API model",
+  openAiC2paGeneratedAt: "OpenAI API creation date"
 };
 var timeZone;
 var lastReport = null;

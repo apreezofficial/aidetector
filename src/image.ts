@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import exifr from "exifr";
 import { scanValue } from "./signatures.js";
 import { inspectC2pa } from "./c2pa.js";
+import { inspectOpenAiProvenance } from "./openai-provenance.js";
 import type { Fields, Inspection, Signal } from "./types.js";
 
 export interface PngTextChunk {
@@ -135,6 +136,13 @@ export async function inspectImage(filePath: string, mimeType: string): Promise<
   Object.assign(fields, c2pa.fields);
   signals.push(...c2pa.signals);
   notes.push(...c2pa.notes);
+
+  // Optional pixel-level watermark and OpenAI C2PA check. This sends supported
+  // images to OpenAI only when the server owner has configured an API key.
+  const openAi = await inspectOpenAiProvenance(filePath);
+  Object.assign(fields, openAi.fields);
+  signals.push(...openAi.signals);
+  notes.push(...openAi.notes);
 
   return { signals, fields, notes, provenance: c2pa.provenance };
 }
