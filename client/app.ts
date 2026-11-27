@@ -338,7 +338,6 @@ for (const [name, value] of SWATCHES) {
   b.style.setProperty("--swatch", value === "neutral" ? "var(--text)" : value);
   b.addEventListener("click", () => {
     applyAccent(value);
-    dismissHint(); // picking a colour is what the hint was asking for
   });
   palette.append(b);
 }
@@ -467,24 +466,6 @@ paintClock();
 setInterval(paintClock, 15000);
 
 // ---- header: open / close menus ----
-
-// The "click me" note stays until the visitor actually picks a colour (just opening the
-// picker to look doesn't count). Adding ?hint to the address shows it again.
-const hint = document.getElementById("hint");
-function dismissHint(): void {
-  hint?.remove();
-  try {
-    localStorage.setItem("hintSeen", "1");
-  } catch {
-    /* storage unavailable */
-  }
-}
-try {
-  if (new URLSearchParams(location.search).has("hint")) localStorage.removeItem("hintSeen");
-  else if (localStorage.getItem("hintSeen")) hint?.remove();
-} catch {
-  /* storage unavailable */
-}
 
 // Menus open toward the page's inside; if one would leave the screen, flip it.
 function keepOnScreen(menu: HTMLElement): void {

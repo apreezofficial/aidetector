@@ -74,8 +74,8 @@ var result = $("result");
 var maxBytes = 25 * 1024 * 1024;
 fetch("/api/limits").then((r) => r.json()).then(({ maxMb, openAiVerificationEnabled }) => {
   maxBytes = maxMb * 1024 * 1024;
-  const hint2 = $("drop-hint");
-  hint2.textContent = (hint2.textContent ?? "").replace(/up to \d+ MB/, `up to ${maxMb} MB`);
+  const hint = $("drop-hint");
+  hint.textContent = (hint.textContent ?? "").replace(/up to \d+ MB/, `up to ${maxMb} MB`);
   if (openAiVerificationEnabled === false) {
     $("privacy-copy").textContent = "Files are inspected on this server and deleted right after. Pixel watermark checks are not enabled on this server.";
   } else if (openAiVerificationEnabled === true) {
@@ -328,7 +328,6 @@ for (const [name, value] of SWATCHES) {
   b.style.setProperty("--swatch", value === "neutral" ? "var(--text)" : value);
   b.addEventListener("click", () => {
     applyAccent(value);
-    dismissHint();
   });
   palette.append(b);
 }
@@ -411,19 +410,6 @@ try {
 timeZone = useOwner ? OWNER.zone : void 0;
 paintClock();
 setInterval(paintClock, 15e3);
-var hint = document.getElementById("hint");
-function dismissHint() {
-  hint?.remove();
-  try {
-    localStorage.setItem("hintSeen", "1");
-  } catch {
-  }
-}
-try {
-  if (new URLSearchParams(location.search).has("hint")) localStorage.removeItem("hintSeen");
-  else if (localStorage.getItem("hintSeen")) hint?.remove();
-} catch {
-}
 function keepOnScreen(menu) {
   menu.style.left = menu.style.right = "";
   const r = menu.getBoundingClientRect();
